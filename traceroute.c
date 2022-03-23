@@ -1,4 +1,6 @@
 #include <netinet/ip.h>
+#include <netinet/ip_icmp.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,15 +55,58 @@ int valid_IPv4_check(char* ip)
 	return 1;
 }
 int main (int argc, char** argv)
-{		
+{	
 	if (argc == 1) {
 		fprintf(stderr, "arguments error: wrong number of arguments\n");
 		return EXIT_FAILURE;
 	}	
-	if (valid_IPv4_check(argv[1]) == -1) {
+	char* ipv4_addr = argv[1];
+	if (valid_IPv4_check(ipv4_addr) == -1) {
 		fprintf(stderr, "arguments error: argument is not a valid IPv4\n");
 		return EXIT_FAILURE;
 	}
+	
+	int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+	if (sockfd < 0) {
+		fprintf(stderr, "socket error: %s\n", strerror(errno)); 
+		return EXIT_FAILURE;
+	}
+	struct icmp header;
+	header.icmp_type = ICMP_ECHO;
+	header.icmp_code = 0;
+	header.icmp_hun.ih_idseq.icd_id = getpid();
+	header.icmp_hun.ih_idseq.icd_seq = 0;
+	header.icmp_cksum = 0;
+	header.icmp_cksum = compute_icmp_checksum((u_int16_t*)&header,
+											  sizeof(header));
+	struct sockaddr_in recipient;
+	bzero(&recipient, sizeof(recipient));
+	recipient.sin_family = AF_INET;
+	int convert_IPv4_addr = inet_pton(AF_INET, ipv4_addr, &recipient.sin_addr);
+	if (convert_IPv4_addr <= 0) {
+		if (convert_IPv4_addr == 0) {
+			fprintf(stderr, "inet_pton error: ip adress in in wrong format\n");
+		}
+		else {
+			fprintf(stderr, "inet_pton error: %s\n", strerror(errno));
+		}
+		return EXIT_FAILURE;
+	}
+	for (int ttl = 1; ttl <= 30; ttl++) {
+		setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
+		ssize_t bytes_sent = sendto(sockfd,
+									&header,
+									sizeof(header),
+									0,
+									(struct sockaddr*)&recipient,
+									sizeof(recipient));
+		if (bytes_sent < 0) {
+			fprintf(stderr, "sendto error: %s\n", strerror(errno)); 
+			return EXIT_FAILURE;
+		}
+
+	}
+
     //walidacja argumentu/adresu ip do tracerouta
     //for(i=1;i<=30;i++)
     //send_icmp(i);send_icmp(i);send_icmp(i);
@@ -71,39 +116,34 @@ int main (int argc, char** argv)
     //wypisywanie odpowiedzi z routerów
     //break, gdy otrzymujemy odpowiedź od komputera docelowego
 
-	int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-	if (sockfd < 0) {
-		fprintf(stderr, "socket error: %s\n", strerror(errno)); 
-		return EXIT_FAILURE;
-	}
 
-	for (;;) {
+	// for (;;) {
 		
-		struct sockaddr_in 	sender;	
-		socklen_t 			sender_len = sizeof(sender);
-		u_int8_t 			buffer[IP_MAXPACKET];
+	// 	struct sockaddr_in 	sender;	
+	// 	socklen_t 			sender_len = sizeof(sender);
+	// 	u_int8_t 			buffer[IP_MAXPACKET];
 
-		ssize_t packet_len = recvfrom (sockfd, buffer, IP_MAXPACKET, 0, (struct sockaddr*)&sender, &sender_len);
-		if (packet_len < 0) {
-			fprintf(stderr, "recvfrom error: %s\n", strerror(errno)); 
-			return EXIT_FAILURE;
-		}
+	// 	ssize_t packet_len = recvfrom (sockfd, buffer, IP_MAXPACKET, 0, (struct sockaddr*)&sender, &sender_len);
+	// 	if (packet_len < 0) {
+	// 		fprintf(stderr, "recvfrom error: %s\n", strerror(errno)); 
+	// 		return EXIT_FAILURE;
+	// 	}
 
-		char sender_ip_str[20]; 
-		inet_ntop(AF_INET, &(sender.sin_addr), sender_ip_str, sizeof(sender_ip_str));
-		printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
+	// 	char sender_ip_str[20]; 
+	// 	inet_ntop(AF_INET, &(sender.sin_addr), sender_ip_str, sizeof(sender_ip_str));
+	// 	printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
 
-		struct ip* 			ip_header = (struct ip*) buffer;
-		ssize_t				ip_header_len = 4 * ip_header->ip_hl;
+	// 	struct ip* 			ip_header = (struct ip*) buffer;
+	// 	ssize_t				ip_header_len = 4 * ip_header->ip_hl;
 
-		printf ("IP header: "); 
-		print_as_bytes (buffer, ip_header_len);
-		printf("\n");
+	// 	printf ("IP header: "); 
+	// 	print_as_bytes (buffer, ip_header_len);
+	// 	printf("\n");
 
-		printf ("IP data:   ");
-		print_as_bytes (buffer + ip_header_len, packet_len - ip_header_len);
-		printf("\n\n");
-	}
+	// 	printf ("IP data:   ");
+	// 	print_as_bytes (buffer + ip_header_len, packet_len - ip_header_len);
+	// 	printf("\n\n");
+	// }
 
 	return EXIT_SUCCESS;
 }
