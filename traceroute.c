@@ -24,8 +24,44 @@ u_int16_t compute_icmp_checksum (const void *buff, int length)
 	return (u_int16_t)(~(sum + (sum >> 16)));
 }
 
+int valid_IPv4_check(char* ip)
+{
+	int* bytes = (int*)calloc(sizeof(int), 4);
+	int idx = -1;
+	for (int byte = 0; byte < 4 ; byte++) {		
+		int steps_counter = 0;
+		while (ip[++idx] != '\0' && ip[idx] != '.') {
+			int digit = ip[idx] - '0';
+			if (digit > 9 || digit < 0) {
+				free(bytes);
+				return -1;
+			}
+			if (steps_counter == 0 && digit == 0) {
+				free(bytes);
+				return -1;
+			}
+			bytes[byte] *= 10;
+			bytes[byte] += digit;
+			steps_counter++;
+		}
+		if (steps_counter > 3 || bytes[byte] > 255 || bytes[byte] < 0) {
+			free(bytes);
+			return -1;
+		}
+	}
+	free(bytes);
+	return 1;
+}
 int main (int argc, char** argv)
-{	
+{		
+	if (argc == 1) {
+		fprintf(stderr, "arguments error: wrong number of arguments\n");
+		return EXIT_FAILURE;
+	}	
+	if (valid_IPv4_check(argv[1]) == -1) {
+		fprintf(stderr, "arguments error: argument is not a valid IPv4\n");
+		return EXIT_FAILURE;
+	}
     //walidacja argumentu/adresu ip do tracerouta
     //for(i=1;i<=30;i++)
     //send_icmp(i);send_icmp(i);send_icmp(i);
