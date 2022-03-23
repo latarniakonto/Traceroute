@@ -10,7 +10,7 @@
 void print_as_bytes (unsigned char* buff, ssize_t length)
 {
 	for (ssize_t i = 0; i < length; i++, buff++)
-		printf ("%.2x ", *buff);	
+		printf ("%.2x ", *buff);
 }
 
 u_int16_t compute_icmp_checksum (const void *buff, int length)
@@ -24,8 +24,17 @@ u_int16_t compute_icmp_checksum (const void *buff, int length)
 	return (u_int16_t)(~(sum + (sum >> 16)));
 }
 
-int main()
-{
+int main (int argc, char** argv)
+{	
+    //walidacja argumentu/adresu ip do tracerouta
+    //for(i=1;i<=30;i++)
+    //send_icmp(i);send_icmp(i);send_icmp(i);
+    //recvfrom(socket);recvfrom(socket);recvfrom(socket);
+    //przetwarzanie odpowiedzi z routerów
+    //formatowanie odpowiedzi z routerów
+    //wypisywanie odpowiedzi z routerów
+    //break, gdy otrzymujemy odpowiedź od komputera docelowego
+
 	int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (sockfd < 0) {
 		fprintf(stderr, "socket error: %s\n", strerror(errno)); 
