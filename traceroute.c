@@ -30,7 +30,7 @@ int valid_IPv4_check(char* ip)
 {
 	int* bytes = (int*)calloc(sizeof(int), 4);
 	int idx = -1;
-	for (int byte = 0; byte < 4 ; byte++) {		
+	for (int byte = 0; byte < 4 ; byte++) {
 		int steps_counter = 0;
 		while (ip[++idx] != '\0' && ip[idx] != '.') {
 			int digit = ip[idx] - '0';
@@ -85,7 +85,7 @@ int main (int argc, char** argv)
 	int convert_IPv4_addr = inet_pton(AF_INET, ipv4_addr, &recipient.sin_addr);
 	if (convert_IPv4_addr <= 0) {
 		if (convert_IPv4_addr == 0) {
-			fprintf(stderr, "inet_pton error: ip adress in in wrong format\n");
+			fprintf(stderr, "inet_pton error: ip adress is in wrong format\n");
 		}
 		else {
 			fprintf(stderr, "inet_pton error: %s\n", strerror(errno));
@@ -101,10 +101,9 @@ int main (int argc, char** argv)
 									(struct sockaddr*)&recipient,
 									sizeof(recipient));
 		if (bytes_sent < 0) {
-			fprintf(stderr, "sendto error: %s\n", strerror(errno)); 
+			fprintf(stderr, "sendto error: %s\n", strerror(errno));
 			return EXIT_FAILURE;
 		}
-
 	}
 
     //walidacja argumentu/adresu ip do tracerouta
