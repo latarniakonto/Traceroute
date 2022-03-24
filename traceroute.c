@@ -92,52 +92,73 @@ int main (int argc, char** argv)
 		}
 		return EXIT_FAILURE;
 	}
-	for (int ttl = 8; ttl <= 8; ttl++) {
+	for (int ttl = 1; ttl <= 8; ttl++) {
+		printf("ttl: %d\n", ttl);
 		if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int)) < 0) {
 			fprintf(stderr, "setsockopt error: %s\n", strerror(errno));
 			return EXIT_FAILURE;
 		}
-		ssize_t bytes_sent = sendto(sockfd,
-									&header,
-									sizeof(header),
-									0,
-									(struct sockaddr*)&recipient,
-									sizeof(recipient));
-		if (bytes_sent < 0) {
-			fprintf(stderr, "sendto error: %s\n", strerror(errno));
-			return EXIT_FAILURE;
-		}
-		struct sockaddr_in sender;
-		socklen_t sender_len = sizeof(sender);
-		u_int8_t buffer[IP_MAXPACKET];
-
-		ssize_t bytes_recevied = recvfrom(sockfd,
-		 							  buffer,
-									  IP_MAXPACKET,
-									  0,
-									  (struct sockaddr*)&sender, &sender_len);
-		if (bytes_recevied < 0) {
-			fprintf(stderr, "recvfrom error: %s\n", strerror(errno));
-			return EXIT_FAILURE;
+		for (int packet = 1; packet <= 3; packet++) {
+			ssize_t bytes_sent = sendto(sockfd,
+										&header,
+										sizeof(header),
+										0,
+										(struct sockaddr*)&recipient,
+										sizeof(recipient));
+			if (bytes_sent < 0) {
+				fprintf(stderr, "sendto error: %s\n", strerror(errno));
+				return EXIT_FAILURE;
+			}
 		}
 
-		char sender_ip_str[20];
-		inet_ntop(AF_INET, 
-				  &(sender.sin_addr), 
-				  sender_ip_str, 
-				  sizeof(sender_ip_str));
-				
-		if (sender_ip_str == NULL) {
-			fprintf(stderr, "inet_ntop error: %s\n", strerror(errno));
+		fd_set readfd;
+		FD_ZERO(&readfd);
+		FD_SET(sockfd, &readfd);
+		struct timeval tv;
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
+		int ready = select(sockfd + 1, &readfd, NULL, NULL, &tv);
+		if (ready < 0) {
+			fprintf(stderr, "select error: %s\n", strerror(errno));
 			return EXIT_FAILURE;
 		}
-		printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
+		else if (ready == 0) {
+			printf("TIMEOUT\n");
+		}
+		else {
+			for (int packet = 1; packet <= 3; packet++) {
+				struct sockaddr_in sender;
+				socklen_t sender_len = sizeof(sender);
+				u_int8_t buffer[IP_MAXPACKET];
 
-		struct ip* ip_header = (struct ip*)buffer;
-		ssize_t ip_header_len = 4 * ip_header->ip_hl;
-		u_int8_t* icmp_packet = buffer + ip_header_len;
-		struct icmp* icmp_header = (struct icmp*)icmp_packet;
-		printf("%d\n", icmp_header->icmp_type);
+				ssize_t bytes_recevied = recvfrom(sockfd,
+											buffer,
+											IP_MAXPACKET,
+											MSG_DONTWAIT,
+											(struct sockaddr*)&sender, &sender_len);
+				if (bytes_recevied < 0) {
+					printf("TIMEOUT1\n");
+				}else {
+					char sender_ip_str[20];
+					inet_ntop(AF_INET,
+							&(sender.sin_addr),
+							sender_ip_str,
+							sizeof(sender_ip_str));
+							
+					if (sender_ip_str == NULL) {
+						fprintf(stderr, "inet_ntop error: %s\n", strerror(errno));
+						return EXIT_FAILURE;
+					}
+					printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
+
+					struct ip* ip_header = (struct ip*)buffer;
+					ssize_t ip_header_len = 4 * ip_header->ip_hl;
+					u_int8_t* icmp_packet = buffer + ip_header_len;
+					struct icmp* icmp_header = (struct icmp*)icmp_packet;
+					// printf("%d\n", icmp_header->icmp_type);
+				}
+			}
+		}
 	}
 
     //walidacja argumentu/adresu ip do tracerouta
