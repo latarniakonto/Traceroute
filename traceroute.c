@@ -93,7 +93,10 @@ int main (int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 	for (int ttl = 8; ttl <= 8; ttl++) {
-		setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int));
+		if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int)) < 0) {
+			fprintf(stderr, "setsockopt error: %s\n", strerror(errno));
+			return EXIT_FAILURE;
+		}
 		ssize_t bytes_sent = sendto(sockfd,
 									&header,
 									sizeof(header),
