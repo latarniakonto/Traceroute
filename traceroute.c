@@ -70,15 +70,7 @@ int main (int argc, char** argv)
 	if (sockfd < 0) {
 		fprintf(stderr, "socket error: %s\n", strerror(errno)); 
 		return EXIT_FAILURE;
-	}
-	struct icmp header;
-	header.icmp_type = ICMP_ECHO;
-	header.icmp_code = 0;
-	header.icmp_hun.ih_idseq.icd_id = getpid();
-	header.icmp_hun.ih_idseq.icd_seq = 0;
-	header.icmp_cksum = 0;
-	header.icmp_cksum = compute_icmp_checksum((u_int16_t*)&header,
-											  sizeof(header));
+	}	
 	struct sockaddr_in recipient;
 	bzero(&recipient, sizeof(recipient));
 	recipient.sin_family = AF_INET;
@@ -92,13 +84,23 @@ int main (int argc, char** argv)
 		}
 		return EXIT_FAILURE;
 	}
-	for (int ttl = 1; ttl <= 8; ttl++) {
-		printf("ttl: %d\n", ttl);
+	uint8_t counter = 0;
+	for (int ttl = 1; ttl <= 30; ttl++) {
+		// printf("ttl: %d\n", ttl);
 		if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int)) < 0) {
 			fprintf(stderr, "setsockopt error: %s\n", strerror(errno));
 			return EXIT_FAILURE;
 		}
 		for (int packet = 1; packet <= 3; packet++) {
+			struct icmp header;
+			header.icmp_type = ICMP_ECHO;
+			header.icmp_code = 0;
+			header.icmp_hun.ih_idseq.icd_id = getpid();
+			header.icmp_hun.ih_idseq.icd_seq = counter++;
+			header.icmp_cksum = 0;
+			header.icmp_cksum = compute_icmp_checksum((u_int16_t*)&header,
+													sizeof(header));
+			
 			ssize_t bytes_sent = sendto(sockfd,
 										&header,
 										sizeof(header),
@@ -109,24 +111,24 @@ int main (int argc, char** argv)
 				fprintf(stderr, "sendto error: %s\n", strerror(errno));
 				return EXIT_FAILURE;
 			}
-		}
-
-		fd_set readfd;
-		FD_ZERO(&readfd);
-		FD_SET(sockfd, &readfd);
-		struct timeval tv;
-		tv.tv_sec = 1;
-		tv.tv_usec = 0;
-		int ready = select(sockfd + 1, &readfd, NULL, NULL, &tv);
-		if (ready < 0) {
-			fprintf(stderr, "select error: %s\n", strerror(errno));
-			return EXIT_FAILURE;
-		}
-		else if (ready == 0) {
-			printf("TIMEOUT\n");
-		}
-		else {
-			for (int packet = 1; packet <= 3; packet++) {
+		}		
+		int received_packets = 0;
+		for (;;) {
+			fd_set readfd;
+			FD_ZERO(&readfd);
+			FD_SET(sockfd, &readfd);
+			struct timeval tv;
+			tv.tv_sec = 1;
+			tv.tv_usec = 0;
+			int ready = select(sockfd + 1, &readfd, NULL, NULL, &tv);
+			if (ready < 0) {
+				fprintf(stderr, "select error: %s\n", strerror(errno));
+				return EXIT_FAILURE;
+			}
+			else if (ready == 0) {				
+				break;
+			}
+			else {
 				struct sockaddr_in sender;
 				socklen_t sender_len = sizeof(sender);
 				u_int8_t buffer[IP_MAXPACKET];
@@ -136,8 +138,8 @@ int main (int argc, char** argv)
 											IP_MAXPACKET,
 											MSG_DONTWAIT,
 											(struct sockaddr*)&sender, &sender_len);
-				if (bytes_recevied < 0) {
-					printf("TIMEOUT1\n");
+				if (bytes_recevied < 0) {					
+					break;
 				}else {
 					char sender_ip_str[20];
 					inet_ntop(AF_INET,
@@ -149,15 +151,25 @@ int main (int argc, char** argv)
 						fprintf(stderr, "inet_ntop error: %s\n", strerror(errno));
 						return EXIT_FAILURE;
 					}
-					printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
 
 					struct ip* ip_header = (struct ip*)buffer;
 					ssize_t ip_header_len = 4 * ip_header->ip_hl;
 					u_int8_t* icmp_packet = buffer + ip_header_len;
 					struct icmp* icmp_header = (struct icmp*)icmp_packet;
+					if (icmp_header->icmp_type == ICMP_TIME_EXCEEDED)
+						icmp_header++;
+					if (icmp_header->icmp_hun.ih_idseq.icd_id == getpid() &&
+						icmp_header->icmp_hun.ih_idseq.icd_seq < ttl * 3 &&
+						icmp_header->icmp_hun.ih_idseq.icd_seq >= (ttl * 3) - 3) {
+						received_packets++;
+						// printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
+						}
+					
 					// printf("%d\n", icmp_header->icmp_type);
-				}
+				}			
 			}
+			if (received_packets == 3)
+				break;
 		}
 	}
 
@@ -185,7 +197,7 @@ int main (int argc, char** argv)
 
 	// 	char sender_ip_str[20]; 
 	// 	inet_ntop(AF_INET, &(sender.sin_addr), sender_ip_str, sizeof(sender_ip_str));
-	// 	printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
+		// printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
 
 	// 	struct ip* 			ip_header = (struct ip*) buffer;
 	// 	ssize_t				ip_header_len = 4 * ip_header->ip_hl;
