@@ -7,6 +7,7 @@
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
+#include <sys/time.h>
 
 
 void print_as_bytes (unsigned char* buff, ssize_t length)
@@ -91,6 +92,8 @@ int main (int argc, char** argv)
 			fprintf(stderr, "setsockopt error: %s\n", strerror(errno));
 			return EXIT_FAILURE;
 		}
+		struct timeval send_time;
+		gettimeofday(&send_time, NULL);
 		for (int packet = 1; packet <= 3; packet++) {
 			struct icmp header;
 			header.icmp_type = ICMP_ECHO;
@@ -113,6 +116,11 @@ int main (int argc, char** argv)
 			}
 		}		
 		int received_packets = 0;
+		char* received_ip_addrs[3];
+		int timeout = 1;
+		suseconds_t average_time = 0;
+		struct timeval received_time;
+		struct timeval diff;
 		for (;;) {
 			fd_set readfd;
 			FD_ZERO(&readfd);
@@ -125,7 +133,9 @@ int main (int argc, char** argv)
 				fprintf(stderr, "select error: %s\n", strerror(errno));
 				return EXIT_FAILURE;
 			}
-			else if (ready == 0) {				
+			else if (ready == 0) {
+				// printf("TIMEOUT1\n");
+				timeout = 0;
 				break;
 			}
 			else {
@@ -138,7 +148,8 @@ int main (int argc, char** argv)
 											IP_MAXPACKET,
 											MSG_DONTWAIT,
 											(struct sockaddr*)&sender, &sender_len);
-				if (bytes_recevied < 0) {					
+				if (bytes_recevied < 0) {
+					printf("TIMEOUT2\n");
 					break;
 				}else {
 					char sender_ip_str[20];
@@ -161,7 +172,24 @@ int main (int argc, char** argv)
 					if (icmp_header->icmp_hun.ih_idseq.icd_id == getpid() &&
 						icmp_header->icmp_hun.ih_idseq.icd_seq < ttl * 3 &&
 						icmp_header->icmp_hun.ih_idseq.icd_seq >= (ttl * 3) - 3) {
-						received_packets++;
+						gettimeofday(&received_time, NULL);
+						timersub(&received_time, &send_time, &diff);
+						average_time += diff.tv_usec;						
+						int duplicate_ip_addr = -1;						
+						for (int i = 0; i < received_packets; i++) {
+							if (strcmp(sender_ip_str, 
+									   received_ip_addrs[i]) == 0) {
+								duplicate_ip_addr = 1;
+							}
+						}
+						if (duplicate_ip_addr > 0) {							
+							received_ip_addrs[received_packets++] = "";
+						}
+						else {
+							received_ip_addrs[received_packets++] = sender_ip_str;
+						}
+						
+						
 						// printf ("Received IP packet with ICMP content from: %s\n", sender_ip_str);
 						}
 					
@@ -169,6 +197,33 @@ int main (int argc, char** argv)
 				}			
 			}
 			if (received_packets == 3)
+				break;
+		}
+		if (timeout == 0) {
+			printf("*\n");
+		}
+		else {
+			if (received_packets == 3) {
+				average_time /= 3000;
+				char ip_addr_cat[64] = "";
+				for (int i = 0; i < received_packets; i++) {
+					strcat(ip_addr_cat, received_ip_addrs[i]);					
+				}
+				printf ("%s %ldms\n", ip_addr_cat, average_time);
+			}
+			else {
+				char ip_addr_cat[64] = "";
+				for (int i = 0; i < received_packets; i++) {
+					strcat(ip_addr_cat, received_ip_addrs[i]);					
+				}
+				printf ("%s ???\n", ip_addr_cat);
+			}
+			int at_final_router = -1;
+			for(int i = 0; i < received_packets; i++) {				
+				if (strcmp(received_ip_addrs[i], ipv4_addr) == 0)
+					at_final_router = 1;
+			}
+			if (at_final_router > 0)
 				break;
 		}
 	}
