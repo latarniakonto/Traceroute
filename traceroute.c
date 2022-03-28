@@ -46,112 +46,35 @@ int main (int argc, char** argv)
 		if (send_packets(&send_time, sockfd, pid, &counter, recipient) < 0) {
 			return EXIT_FAILURE;
 		}
-		
-		int received_packets = 0;
+				
 		char* received_ip_addrs[3];
-		int timeout = 1;
-		suseconds_t average_time = 0;
-		struct timeval received_time;
-		struct timeval diff;
-		for (;;) {
-			fd_set readfd;
-			FD_ZERO(&readfd);
-			FD_SET(sockfd, &readfd);
-			struct timeval tv;
-			tv.tv_sec = 1;
-			tv.tv_usec = 0;
-			int ready = select(sockfd + 1, &readfd, NULL, NULL, &tv);
-			if (ready < 0) {
-				fprintf(stderr, "select error: %s\n", strerror(errno));
-				return EXIT_FAILURE;
-			}
-			else if (ready == 0) {				
-				timeout = 0;
-				break;
-			}
-			else {
-				struct sockaddr_in sender;
-				socklen_t sender_len = sizeof(sender);
-				u_int8_t buffer[IP_MAXPACKET];
-
-				ssize_t bytes_recevied = recvfrom(sockfd,
-											buffer,
-											IP_MAXPACKET,
-											MSG_DONTWAIT,
-											(struct sockaddr*)&sender, &sender_len);
-				if (bytes_recevied < 0) {					
-					break;
-				}else {
-					char sender_ip_str[20];
-					inet_ntop(AF_INET,
-							&(sender.sin_addr),
-							sender_ip_str,
-							sizeof(sender_ip_str));
-							
-					if (sender_ip_str == NULL) {
-						fprintf(stderr, "inet_ntop error: %s\n", strerror(errno));
-						return EXIT_FAILURE;
-					}
-
-					struct ip* ip_header = (struct ip*)buffer;
-					ssize_t ip_header_len = 4 * ip_header->ip_hl;
-					u_int8_t* icmp_packet = buffer + ip_header_len;
-					struct icmp* icmp_header = (struct icmp*)icmp_packet;
-					if (icmp_header->icmp_type == ICMP_TIME_EXCEEDED)
-						icmp_header++;
-					if (icmp_header->icmp_hun.ih_idseq.icd_id == pid &&
-						icmp_header->icmp_hun.ih_idseq.icd_seq < ttl * 3 &&
-						icmp_header->icmp_hun.ih_idseq.icd_seq >= (ttl * 3) - 3) {
-						gettimeofday(&received_time, NULL);
-						timersub(&received_time, &send_time, &diff);
-						average_time += diff.tv_usec;						
-						int duplicate_ip_addr = -1;						
-						for (int i = 0; i < received_packets; i++) {
-							if (strcmp(sender_ip_str, 
-									   received_ip_addrs[i]) == 0) {
-								duplicate_ip_addr = 1;
-							}
-						}
-						if (duplicate_ip_addr > 0) {							
-							received_ip_addrs[received_packets++] = "";
-						}
-						else {
-							received_ip_addrs[received_packets++] = sender_ip_str;
-						}													
-					}									
-				}			
-			}
-			if (received_packets == 3)
-				break;
+		struct timeval received_time[3];
+		int received_packets = receive_packets(sockfd,
+											   pid,
+											   ttl,
+											   received_time,
+											   received_ip_addrs);
+			
+		if (received_packets == 3) {
+			print_3_packets(received_time, received_ip_addrs, send_time);
 		}
-		if (timeout == 0) {
+		else if (received_packets > 0) {
+			print_less_than_3_packets(received_packets, received_ip_addrs);
+		}
+		else if (received_packets == 0){
 			printf("*\n");
 		}
 		else {
-			if (received_packets == 3) {
-				average_time /= 3000;
-				char ip_addr_cat[64] = "";
-				for (int i = 0; i < received_packets; i++) {
-					strcat(ip_addr_cat, received_ip_addrs[i]);					
-				}
-				printf ("%s %ldms\n", ip_addr_cat, average_time);
-			}
-			else {
-				char ip_addr_cat[64] = "";
-				for (int i = 0; i < received_packets; i++) {
-					strcat(ip_addr_cat, received_ip_addrs[i]);					
-				}
-				printf ("%s ???\n", ip_addr_cat);
-			}
-			int at_final_router = -1;
-			for(int i = 0; i < received_packets; i++) {				
-				if (strcmp(received_ip_addrs[i], ipv4_addr) == 0)
-					at_final_router = 1;
-			}
-			if (at_final_router > 0)
-				break;
-		}
-	}
+			return EXIT_FAILURE;
+		}						
 
-	return EXIT_SUCCESS;
+		int at_final_router = -1;
+		for(int i = 0; i < received_packets; i++) {				
+			if (strcmp(received_ip_addrs[i], ipv4_addr) == 0)
+				at_final_router = 1;
+		}
+		if (at_final_router > 0)
+			return EXIT_SUCCESS;
+	}
+	return EXIT_FAILURE;
 }
