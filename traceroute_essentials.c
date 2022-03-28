@@ -67,6 +67,12 @@ int send_packets(struct timeval* send_time,
 	}
 	return 1;
 }
+int expected_packet(struct icmp* header, pid_t pid, u_int8_t ttl)
+{
+	return (header->icmp_hun.ih_idseq.icd_id == pid &&
+			header->icmp_hun.ih_idseq.icd_seq < ttl * 3 &&
+			header->icmp_hun.ih_idseq.icd_seq >= (ttl * 3) - 3);
+}
 int receive_packets(int sockfd,
 					pid_t pid, u_int8_t ttl, 
 					struct timeval received_time[3], char** received_ip_addrs)
@@ -99,14 +105,15 @@ int receive_packets(int sockfd,
 										MSG_DONTWAIT,
 										(struct sockaddr*)&sender, &sender_len);
 			if (bytes_recevied < 0) {
-				break;
+				fprintf(stderr, "recvfrom error: %s\n", strerror(errno));
+				return -1;
 			}else {
 				char sender_ip_str[20];
 				inet_ntop(AF_INET,
 						&(sender.sin_addr),
 						sender_ip_str,
 						sizeof(sender_ip_str));
-						
+
 				if (sender_ip_str == NULL) {
 					fprintf(stderr, "inet_ntop error: %s\n", strerror(errno));
 					return -1;
@@ -118,18 +125,17 @@ int receive_packets(int sockfd,
 				struct icmp* icmp_header = (struct icmp*)icmp_packet;
 				if (icmp_header->icmp_type == ICMP_TIME_EXCEEDED)
 					icmp_header++;
-				if (icmp_header->icmp_hun.ih_idseq.icd_id == pid &&
-					icmp_header->icmp_hun.ih_idseq.icd_seq < ttl * 3 &&
-					icmp_header->icmp_hun.ih_idseq.icd_seq >= (ttl * 3) - 3) {
+
+				if (expected_packet(icmp_header, pid, ttl) == 1) {
 					gettimeofday(&received_time[received_packets], NULL);
-					int duplicate_ip_addr = -1;						
+					int duplicate_ip_addr = -1;
 					for (int i = 0; i < received_packets; i++) {
-						if (strcmp(sender_ip_str, 
+						if (strcmp(sender_ip_str,
 									received_ip_addrs[i]) == 0) {
 							duplicate_ip_addr = 1;
 						}
 					}
-					if (duplicate_ip_addr > 0) {							
+					if (duplicate_ip_addr > 0) {
 						received_ip_addrs[received_packets++] = "";
 					}
 					else {
