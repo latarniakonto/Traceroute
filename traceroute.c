@@ -17,7 +17,11 @@ int main (int argc, char** argv)
 	if (sockfd < 0) {
 		fprintf(stderr, "socket error: %s\n", strerror(errno)); 
 		return EXIT_FAILURE;
-	}	
+	}
+
+	pid_t pid = getpid();
+	uint8_t counter = 0;
+
 	struct sockaddr_in recipient;
 	bzero(&recipient, sizeof(recipient));
 	recipient.sin_family = AF_INET;
@@ -29,37 +33,20 @@ int main (int argc, char** argv)
 		else {
 			fprintf(stderr, "inet_pton error: %s\n", strerror(errno));
 		}
-		return EXIT_FAILURE;
+		return -1;
 	}
-	uint8_t counter = 0;
-	for (int ttl = 1; ttl <= 30; ttl++) {		
+
+	for (int ttl = 1; ttl <= 30; ttl++) {
 		if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &ttl, sizeof(int)) < 0) {
 			fprintf(stderr, "setsockopt error: %s\n", strerror(errno));
 			return EXIT_FAILURE;
 		}
+
 		struct timeval send_time;
-		gettimeofday(&send_time, NULL);
-		for (int packet = 1; packet <= 3; packet++) {
-			struct icmp header;
-			header.icmp_type = ICMP_ECHO;
-			header.icmp_code = 0;
-			header.icmp_hun.ih_idseq.icd_id = getpid();
-			header.icmp_hun.ih_idseq.icd_seq = counter++;
-			header.icmp_cksum = 0;
-			header.icmp_cksum = compute_icmp_checksum((u_int16_t*)&header,
-													sizeof(header));
-			
-			ssize_t bytes_sent = sendto(sockfd,
-										&header,
-										sizeof(header),
-										0,
-										(struct sockaddr*)&recipient,
-										sizeof(recipient));
-			if (bytes_sent < 0) {
-				fprintf(stderr, "sendto error: %s\n", strerror(errno));
-				return EXIT_FAILURE;
-			}
-		}		
+		if (send_packets(&send_time, sockfd, pid, &counter, recipient) < 0) {
+			return EXIT_FAILURE;
+		}
+		
 		int received_packets = 0;
 		char* received_ip_addrs[3];
 		int timeout = 1;
@@ -112,7 +99,7 @@ int main (int argc, char** argv)
 					struct icmp* icmp_header = (struct icmp*)icmp_packet;
 					if (icmp_header->icmp_type == ICMP_TIME_EXCEEDED)
 						icmp_header++;
-					if (icmp_header->icmp_hun.ih_idseq.icd_id == getpid() &&
+					if (icmp_header->icmp_hun.ih_idseq.icd_id == pid &&
 						icmp_header->icmp_hun.ih_idseq.icd_seq < ttl * 3 &&
 						icmp_header->icmp_hun.ih_idseq.icd_seq >= (ttl * 3) - 3) {
 						gettimeofday(&received_time, NULL);
@@ -130,7 +117,7 @@ int main (int argc, char** argv)
 						}
 						else {
 							received_ip_addrs[received_packets++] = sender_ip_str;
-						}																		
+						}													
 					}									
 				}			
 			}

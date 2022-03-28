@@ -14,5 +14,6 @@
 
 u_int16_t compute_icmp_checksum(const void* buff, int length);
 int valid_IPv4_check(char* ip);
-
+int send_packets(struct timeval* send_time,
+ 				 int sockfd, pid_t pid, uint8_t* seq, struct sockaddr_in recipient);
 #endif
