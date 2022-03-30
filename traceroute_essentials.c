@@ -45,7 +45,6 @@ int send_packets(struct timeval* send_time,
 {
     gettimeofday(send_time, NULL);
     for (int packet = 1; packet <= 3; packet++) {
-        // printf("%d %d\n", pid, *seq);
         struct icmp header;
         header.icmp_type = ICMP_ECHO;
         header.icmp_code = 0;
@@ -89,8 +88,8 @@ int receive_packets(int sockfd,
         if (ready < 0) {
             fprintf(stderr, "select error: %s\n", strerror(errno));
             return -1;
-        } else if (ready == 0) {
-            return 0;
+        } else if (ready == 0) {			
+            return received_packets;
         } else {
             struct sockaddr_in sender;
             socklen_t sender_len = sizeof(sender);
@@ -123,7 +122,7 @@ int receive_packets(int sockfd,
                 struct icmp* icmp_header = (struct icmp*)icmp_packet;
                 if (icmp_header->icmp_type == ICMP_TIME_EXCEEDED)
                     icmp_header++;
-
+								
                 if (expected_packet(icmp_header, pid, ttl) == 1) {
                     gettimeofday(&received_time[received_packets], NULL);
                     int duplicate_ip_addr = -1;
@@ -160,7 +159,6 @@ suseconds_t get_average_time(struct timeval send_time,
     struct timeval diff;
     suseconds_t average_time = 0;
     for (int i = 0; i < 3; i++) {
-        // printf("rec:%ld %ld send:%ld %ld\n", received_time[i].tv_sec, received_time[i].tv_usec, send_time.tv_sec, send_time.tv_usec);
         timersub(&received_time[i], &send_time, &diff);
         average_time += diff.tv_usec;
     }
