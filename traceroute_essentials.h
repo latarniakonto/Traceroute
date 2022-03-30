@@ -23,4 +23,6 @@ int receive_packets(int sockfd,
 void print_less_than_3_packets(int received_packets, char** received_ip_addrs);
 void print_3_packets(struct timeval received_time[3],
     char** received_ip_addrs, struct timeval send_time);
+int final_router(char* ipv4_addr,
+    int received_packets, char** received_ip_addrs);
 #endif

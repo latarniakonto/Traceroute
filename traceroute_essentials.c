@@ -183,3 +183,13 @@ void print_3_packets(struct timeval received_time[3],
     }
     printf("%ldms\n", avg_time);
 }
+
+int final_router(char* ipv4_addr,
+    int received_packets, char** received_ip_addrs)
+{
+    for (int i = 0; i < received_packets; i++) {
+        if (strcmp(received_ip_addrs[i], ipv4_addr) == 0)
+            return 1;
+    }
+    return -1;
+}

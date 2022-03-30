@@ -63,13 +63,9 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
 
-        int at_final_router = -1;
-        for (int i = 0; i < received_packets; i++) {
-            if (strcmp(received_ip_addrs[i], ipv4_addr) == 0)
-                at_final_router = 1;
-        }
-        if (at_final_router > 0)
+        if (final_router(ipv4_addr, received_packets, received_ip_addrs) > 0) {
             return EXIT_SUCCESS;
+        }
     }
     return EXIT_FAILURE;
 }
