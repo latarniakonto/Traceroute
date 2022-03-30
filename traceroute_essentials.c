@@ -88,7 +88,7 @@ int receive_packets(int sockfd,
         if (ready < 0) {
             fprintf(stderr, "select error: %s\n", strerror(errno));
             return -1;
-        } else if (ready == 0) {			
+        } else if (ready == 0) {
             return received_packets;
         } else {
             struct sockaddr_in sender;
@@ -122,7 +122,7 @@ int receive_packets(int sockfd,
                 struct icmp* icmp_header = (struct icmp*)icmp_packet;
                 if (icmp_header->icmp_type == ICMP_TIME_EXCEEDED)
                     icmp_header++;
-								
+
                 if (expected_packet(icmp_header, pid, ttl) == 1) {
                     gettimeofday(&received_time[received_packets], NULL);
                     int duplicate_ip_addr = -1;
@@ -133,10 +133,16 @@ int receive_packets(int sockfd,
                             duplicate_ip_addr = 1;
                         }
                     }
+                    // Sometimes recvfrom() would override memory
+                    // when running ping and this program in parallel
+                    char prevent_memory_override_str[20];
+                    for (int i = 0; i < 20; i++) {
+                        prevent_memory_override_str[i] = sender_ip_str[i];
+                    }
                     if (duplicate_ip_addr > 0) {
                         received_ip_addrs[received_packets++] = "";
                     } else {
-                        received_ip_addrs[received_packets++] = sender_ip_str;
+                        received_ip_addrs[received_packets++] = prevent_memory_override_str;
                     }
                 }
             }
