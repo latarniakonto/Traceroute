@@ -140,7 +140,7 @@ int receive_packets(int sockfd,
                         prevent_memory_override_str[i] = sender_ip_str[i];
                     }
                     if (duplicate_ip_addr > 0) {
-                        received_ip_addrs[received_packets++] = "";
+                        received_ip_addrs[received_packets++] = "DUPLICAT";
                     } else {
                         received_ip_addrs[received_packets++] = prevent_memory_override_str;
                     }
@@ -152,12 +152,13 @@ int receive_packets(int sockfd,
 }
 
 void print_less_than_3_packets(int received_packets, char** received_ip_addrs)
-{
-    char ip_addr_cat[64] = "";
+{    
     for (int i = 0; i < received_packets; i++) {
-        strcat(ip_addr_cat, received_ip_addrs[i]);
+        if (strcmp(received_ip_addrs[i], "DUPLICAT") != 0) {
+			printf("%s ", received_ip_addrs[i]);
+		}
     }
-    printf("%s ???\n", ip_addr_cat);
+    printf("???\n");
 }
 suseconds_t get_average_time(struct timeval send_time,
     struct timeval received_time[3])
@@ -173,10 +174,12 @@ suseconds_t get_average_time(struct timeval send_time,
 void print_3_packets(struct timeval received_time[3],
     char** received_ip_addrs, struct timeval send_time)
 {
-    char ip_addr_cat[64] = "";
+    
     suseconds_t avg_time = get_average_time(send_time, received_time);
     for (int i = 0; i < 3; i++) {
-        strcat(ip_addr_cat, received_ip_addrs[i]);
+        if (strcmp(received_ip_addrs[i], "DUPLICAT") != 0) {
+			printf("%s ", received_ip_addrs[i]);
+		}
     }
-    printf("%s %ldms\n", ip_addr_cat, avg_time);
+    printf("%ldms\n", avg_time);
 }
