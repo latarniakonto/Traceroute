@@ -152,11 +152,11 @@ int receive_packets(int sockfd,
 }
 
 void print_less_than_3_packets(int received_packets, char** received_ip_addrs)
-{    
+{
     for (int i = 0; i < received_packets; i++) {
         if (strcmp(received_ip_addrs[i], "DUPLICAT") != 0) {
-			printf("%s ", received_ip_addrs[i]);
-		}
+            printf("%s ", received_ip_addrs[i]);
+        }
     }
     printf("???\n");
 }
@@ -174,12 +174,12 @@ suseconds_t get_average_time(struct timeval send_time,
 void print_3_packets(struct timeval received_time[3],
     char** received_ip_addrs, struct timeval send_time)
 {
-    
+
     suseconds_t avg_time = get_average_time(send_time, received_time);
     for (int i = 0; i < 3; i++) {
         if (strcmp(received_ip_addrs[i], "DUPLICAT") != 0) {
-			printf("%s ", received_ip_addrs[i]);
-		}
+            printf("%s ", received_ip_addrs[i]);
+        }
     }
     printf("%ldms\n", avg_time);
 }
