@@ -53,11 +53,11 @@ int main(int argc, char** argv)
         int received_packets = receive_packets(sockfd, pid, ttl, received_time, received_ip_addrs);
 
         if (received_packets == 3) {
-            print_3_packets(received_time, received_ip_addrs, send_time);
+            print_3_packets(received_time, received_ip_addrs, send_time, ttl);
         } else if (received_packets > 0) {
-            print_less_than_3_packets(received_packets, received_ip_addrs);
+            print_less_than_3_packets(received_packets, received_ip_addrs, ttl);
         } else if (received_packets == 0) {
-            printf("*\n");
+            printf("%d. *\n", ttl);
         } else {
             return EXIT_FAILURE;
         }
