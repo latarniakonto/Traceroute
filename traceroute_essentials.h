@@ -11,7 +11,7 @@
 
 
 int valid_IPv4_check(char* ip);
-void print_less_than_3_packets(int received_packets, char** received_ip_addrs);
-void print_3_packets(struct timeval received_time[3], char** received_ip_addrs, struct timeval send_time);
+void print_less_than_3_packets(int received_packets, char** received_ip_addrs, int ttl);
+void print_3_packets(struct timeval received_time[3], char** received_ip_addrs, struct timeval send_time, int ttl);
 int at_final_destination(char* ipv4_addr, int received_packets, char** received_ip_addrs);
 #endif
