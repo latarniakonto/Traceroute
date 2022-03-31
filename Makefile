@@ -1,7 +1,6 @@
 # -*- MakeFile -*-
 # Makefile for traceroute program
 CFLAGS=-std=gnu17 -Wall -Wextra
-# .KEEP_STATE:
 CC=gcc
 
 traceroute: traceroute.o traceroute_essentials.o traceroute_sending.o traceroute_receiving.o
