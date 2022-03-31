@@ -1,6 +1,6 @@
 #include "traceroute_essentials.h"
-#include "traceroute_receiving_essentials.h"
-#include "traceroute_sending_essentials.h"
+#include "traceroute_receiving.h"
+#include "traceroute_sending.h"
 
 
 int main(int argc, char** argv)

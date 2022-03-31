@@ -1,5 +1,5 @@
-#ifndef TRACEROUTE_RECEIVING_ESSENTIALS_H_
-#define TRACEROUTE_RECEIVING_ESSENTIALS_H_
+#ifndef TRACEROUTE_RECEIVING_H_
+#define TRACEROUTE_RECEIVING_H_
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>

@@ -1,5 +1,5 @@
-#ifndef TRACEROUTE_SENDING_ESSENTIALS_H_
-#define TRACEROUTE_SENDING_ESSENTIALS_H_
+#ifndef TRACEROUTE_SENDING_H_
+#define TRACEROUTE_SENDING_H_
 #include <assert.h>
 #include <errno.h>
 #include <netinet/ip.h>
