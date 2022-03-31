@@ -32,7 +32,7 @@ int valid_IPv4_check(char* ip)
 void print_less_than_3_packets(int received_packets, char** received_ip_addrs)
 {
     for (int i = 0; i < received_packets; i++) {
-        if (strcmp(received_ip_addrs[i], "DUPLICAT") != 0) {
+        if (strncmp(received_ip_addrs[i], "DUPLICATE", 10) != 0) {
             printf("%s ", received_ip_addrs[i]);
         }
     }
