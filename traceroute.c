@@ -1,6 +1,7 @@
 #include "traceroute_essentials.h"
-#include "traceroute_sending_essentials.h"
 #include "traceroute_receiving_essentials.h"
+#include "traceroute_sending_essentials.h"
+
 
 int main(int argc, char** argv)
 {
@@ -9,7 +10,7 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
     char* ipv4_addr = argv[1];
-    if (valid_IPv4_check(ipv4_addr) == -1) {
+    if (!valid_IPv4_check(ipv4_addr)) {
         fprintf(stderr, "arguments error: argument is not a valid IPv4\n");
         return EXIT_FAILURE;
     }
@@ -21,7 +22,7 @@ int main(int argc, char** argv)
     }
 
     pid_t pid = getpid();
-    uint8_t counter = 0;
+    u_int8_t counter = 0;
 
     struct sockaddr_in recipient;
     bzero(&recipient, sizeof(recipient));
@@ -43,17 +44,13 @@ int main(int argc, char** argv)
         }
 
         struct timeval send_time;
-        if (send_packets(&send_time, sockfd, pid, &counter, recipient) < 0) {
+        if (!send_packets(&send_time, sockfd, pid, &counter, recipient)) {
             return EXIT_FAILURE;
         }
 
         char* received_ip_addrs[3];
         struct timeval received_time[3];
-        int received_packets = receive_packets(sockfd,
-            pid,
-            ttl,
-            received_time,
-            received_ip_addrs);
+        int received_packets = receive_packets(sockfd, pid, ttl, received_time, received_ip_addrs);
 
         if (received_packets == 3) {
             print_3_packets(received_time, received_ip_addrs, send_time);
@@ -65,7 +62,7 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
 
-        if (final_router(ipv4_addr, received_packets, received_ip_addrs) > 0) {
+        if (!at_final_destination(ipv4_addr, received_packets, received_ip_addrs)) {
             return EXIT_SUCCESS;
         }
     }

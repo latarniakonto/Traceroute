@@ -11,11 +11,11 @@ int valid_IPv4_check(char* ip)
             int digit = ip[idx] - '0';
             if (digit > 9 || digit < 0) {
                 free(bytes);
-                return -1;
+                return 0;
             }
             if (steps_counter == 0 && digit == 0) {
                 free(bytes);
-                return -1;
+                return 0;
             }
             bytes[byte] *= 10;
             bytes[byte] += digit;
@@ -23,13 +23,12 @@ int valid_IPv4_check(char* ip)
         }
         if (steps_counter > 3 || bytes[byte] > 255 || bytes[byte] < 0) {
             free(bytes);
-            return -1;
+            return 0;
         }
     }
     free(bytes);
     return 1;
 }
-
 void print_less_than_3_packets(int received_packets, char** received_ip_addrs)
 {
     for (int i = 0; i < received_packets; i++) {
@@ -39,8 +38,7 @@ void print_less_than_3_packets(int received_packets, char** received_ip_addrs)
     }
     printf("???\n");
 }
-suseconds_t get_average_time(struct timeval send_time,
-    struct timeval received_time[3])
+suseconds_t get_average_time(struct timeval send_time, struct timeval received_time[3])
 {
     struct timeval diff;
     suseconds_t average_time = 0;
@@ -50,25 +48,22 @@ suseconds_t get_average_time(struct timeval send_time,
     }
     return average_time / 3000;
 }
-void print_3_packets(struct timeval received_time[3],
-    char** received_ip_addrs, struct timeval send_time)
+void print_3_packets(struct timeval received_time[3], char** received_ip_addrs, struct timeval send_time)
 {
 
     suseconds_t avg_time = get_average_time(send_time, received_time);
     for (int i = 0; i < 3; i++) {
-        if (strcmp(received_ip_addrs[i], "DUPLICAT") != 0) {
+        if (strncmp(received_ip_addrs[i], "DUPLICATE", 10) != 0) {
             printf("%s ", received_ip_addrs[i]);
         }
     }
     printf("%ldms\n", avg_time);
 }
-
-int final_router(char* ipv4_addr,
-    int received_packets, char** received_ip_addrs)
+int at_final_destination(char* ipv4_addr, int received_packets, char** received_ip_addrs)
 {
     for (int i = 0; i < received_packets; i++) {
         if (strcmp(received_ip_addrs[i], ipv4_addr) == 0)
-            return 1;
+            return 0;
     }
-    return -1;
+    return 1;
 }
