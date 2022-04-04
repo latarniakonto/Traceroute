@@ -13,5 +13,5 @@
 
 
 int is_expected_packet(struct icmp* header, pid_t pid, u_int8_t ttl);
-int receive_packets(int sockfd, pid_t pid, u_int8_t ttl, struct timeval received_time[3], char** received_ip_addrs);
+int* receive_packets(int sockfd, pid_t pid, u_int8_t ttl, struct timeval received_time[3], char** received_ip_addrs);
 #endif
