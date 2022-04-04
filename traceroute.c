@@ -30,7 +30,7 @@ int main(int argc, char** argv)
         } else {
             fprintf(stderr, "inet_pton error: %s\n", strerror(errno));
         }
-        return -1;
+        return EXIT_FAILURE;
     }
 
     for (int ttl = 1; ttl <= 30; ttl++) {
