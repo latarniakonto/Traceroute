@@ -8,5 +8,5 @@ gateway along the path to the host.*
 ## Running the program (Linux)
 1. Navigate to the main program folder aka */Traceroute* <br>
 2. Run *make* command. It may require installing some additional software.
-3. Run ./traceroute <IPV4_ADDR> command with administrative privileges. Only administrator can open raw sockets in Linux operating system.
+3. Run *./traceroute <IPV4_ADDR>* command with administrative privileges. Only administrator can open raw sockets in Linux operating system.
 
